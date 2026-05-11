@@ -612,7 +612,7 @@ async function createMasterOrder({ courses, price, clientId, customerId, comment
     return { uid: Math.floor(100000 + Math.random() * 900000), positions: courses };
   }
 
-  const response = await fetch("/master/order/add", {
+  const response = await fetch("/api/order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ courses, price, clientId, customerId, comment }),

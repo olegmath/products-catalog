@@ -158,7 +158,7 @@ async function addMasterOrder(payload) {
 const server = http.createServer((request, response) => {
   const url = new URL(request.url, `http://${request.headers.host}`);
 
-  if (url.pathname === "/master/order/add" && request.method === "POST") {
+  if (url.pathname === "/api/order" && request.method === "POST") {
     readJson(request)
       .then(addMasterOrder)
       .then((order) => send(response, 200, JSON.stringify({ order }), "application/json; charset=utf-8"))
@@ -166,7 +166,7 @@ const server = http.createServer((request, response) => {
     return;
   }
 
-  if (url.pathname === "/config.js") {
+  if (url.pathname === "/api/config") {
     const env = readEnv();
     send(
       response,
