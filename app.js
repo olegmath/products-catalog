@@ -645,8 +645,8 @@ async function createCheckout(formData) {
   const order = await createMasterOrder({
     courses: selected,
     price: total,
-    clientId: studentClientId,
-    customerId: parentClientId,
+    clientId: parentClientId,
+    customerId: studentClientId,
     comment,
   });
 
