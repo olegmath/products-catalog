@@ -792,7 +792,8 @@ async function loadProducts() {
 
   courses = products
     .map((product) => {
-    const name = stripProductName(product.name);
+    const rawName = Number(product.productId) === 1831795 ? 'Математика ЕГЭ "Лицеист"' : product.name;
+    const name = stripProductName(rawName);
     const template = fallbackCourses.find((course) => course.exam === courseExam(name)) || fallbackCourses[0];
     const schedule = courseSchedule(name);
     const copy = courseCopyFor(name);
