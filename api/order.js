@@ -1,86 +1,9 @@
-function orderPosition(course) {
-  return {
-    catalogItemId: course.productId,
-    fieldValues: [
-      {
-        fieldId: -1808,
-        fieldName: "Поток",
-        optionName: "Без потока",
-        optionValue: String(course.flowId),
-        isSelected: true,
-        parents: null,
-        extraPay: 0,
-        extraWork: 0,
-        extraPayPercentage: 0,
-        extraWorkPercentage: 0,
-      },
-    ],
-    name: course.name,
-    price: course.price,
-    quantity: 1,
-    usedCapacity: 1,
-  };
-}
+const soho = require("../lib/soho");
 
-async function graphQLRequest(query, variables) {
-  const token = (process.env.SOHO_API_TOKEN_ADMIN || "").trim().replace(/\.$/, "");
-  if (!token) {
-    throw new Error("SOHO_API_TOKEN_ADMIN не задан в окружении");
-  }
-
-  const result = await fetch("https://api.soholms.com/master/graphql", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: token,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const data = await result.json().catch(() => ({}));
-  if (!result.ok || data.errors?.length) {
-    throw new Error(data.errors?.[0]?.message || `SOHO GraphQL error ${result.status}`);
-  }
-  return data.data;
-}
-
-async function addMasterOrder(payload) {
-  const query = `
-    mutation AddOrderMutation($input: AddOrderInput!) {
-      addOrder(input: $input) {
-        order {
-          uid
-          price
-          paymentUrl
-          transactions {
-            uid
-            amountPlanned
-            paymentStatus
-          }
-          positions {
-            catalogItemId
-            name
-            price
-          }
-        }
-      }
-    }
-  `;
-
-  const data = await graphQLRequest(query, {
-    input: {
-      isSupervised: false,
-      dryRunByOrderId: null,
-      patch: {
-        clientId: payload.clientId,
-        customerId: payload.customerId || payload.clientId,
-        price: payload.price,
-        notes: payload.comment,
-        positions: payload.courses.map(orderPosition),
-      },
-    },
-  });
-
-  return data.addOrder.order;
+function clientIp(request) {
+  const fwd = request.headers["x-forwarded-for"];
+  if (fwd) return String(fwd).split(",")[0].trim();
+  return request.headers["x-real-ip"] || request.socket?.remoteAddress || "";
 }
 
 module.exports = async (request, response) => {
@@ -89,12 +12,23 @@ module.exports = async (request, response) => {
     return;
   }
 
+  if (!soho.isConfigured()) {
+    response.status(200).json(soho.mockCheckout());
+    return;
+  }
+
   try {
-    const order = await addMasterOrder(request.body || {});
-    response.status(200).json({ order });
+    const result = await soho.checkout(request.body || {}, clientIp(request));
+    response.status(200).json(result);
   } catch (error) {
-    response.status(500).json({ error: error.message });
+    if (error instanceof soho.TurnstileError) {
+      response.status(400).json({ error: "Подтвердите, что вы не робот, и попробуйте снова." });
+      return;
+    }
+    // Validation errors (our own Error messages) → 400; anything else → 500 with a generic message.
+    const isValidation = /Некорректн|productId|price|courses|flowId|Unknown/i.test(error.message || "");
+    response.status(isValidation ? 400 : 500).json({
+      error: isValidation ? "Некорректные данные заказа" : "Не удалось создать заказ. Попробуйте ещё раз.",
+    });
   }
 };
-
-module.exports.addMasterOrder = addMasterOrder;

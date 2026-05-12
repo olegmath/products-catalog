@@ -56,11 +56,6 @@
 
           <div class="summary-lines">
             <div><span>Сумма</span><strong id="subtotal">0 ₽</strong></div>
-            <label class="promo-line">
-              <span>Промокод</span>
-              <input id="promoInput" name="promo" value="" placeholder="Введите" aria-label="Промокод" />
-            </label>
-            <div id="promoDiscountLine" class="discount" hidden><span>Скидка по промокоду</span><strong id="discount">0 ₽</strong></div>
             <div class="total-line"><span>Итого</span><strong id="total">0 ₽</strong></div>
           </div>
 
@@ -100,6 +95,8 @@
               </div>
             </fieldset>
 
+            <div id="turnstileContainer" class="turnstile-box" hidden></div>
+
             <button id="payButton" class="pay-button" type="submit">
               <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
               <span>Оплатить всё сразу</span>
@@ -122,7 +119,6 @@
       </div>
     </div>
 
-    <script src="/api/config"></script>
     <script src="app.js"></script>
   </body>
 </html>

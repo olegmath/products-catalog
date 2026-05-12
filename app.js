@@ -1,5 +1,3 @@
-const API_BASE = "https://api.soholms.com/api/v1";
-const SOHO_TOKEN = window.SOHO_API_TOKEN || "";
 const COURSE_ID = 23978;
 const TARGET_FLOW_ID = 34749;
 const TARGET_PRODUCT_NAME = 'Интенсив "Постойнное Повторение"';
@@ -420,14 +418,14 @@ const courseCopy = [
   },
   {
     test: /Информатика.*ОГЭ/i,
-    description: "Два интенсива по информатике ОГЭ — программирование на Python и полный разбор обеих частей экзамена.",
-    accent: "Закрываем всё, что есть в ОГЭ по информатике — от программирования до тестовых заданий.",
+    description: "Два интенсива по информатике ОГЭ — программирование на Python и полный разбор первой и второй части экзамена.",
+    accent: "Закрываем всё, что есть в ОГЭ по информатике — от заданий 1–10 до практической части за компьютером.",
     details: {
-      intro: "Курс разбит на два блока: сначала программирование на Python, затем полный разбор первой и второй части ОГЭ — так материал ложится последовательно и без пробелов.",
+      intro: "Курс разбит на два блока: сначала программирование на Python (задания 14–15 и 16), затем — теоретическая часть 1 (задания 1–10) и практические задания части 2 на компьютере (11–15).",
       intensiveDates: ["4 июня · 10:00", "5 июня · 10:00"],
       includes: [
-        "<strong>Интенсив 1 — Программирование.</strong> Основы Python под задачи ОГЭ: переменные, условия, циклы, функции, работа со строками и списками — разбираем все типы заданий на программирование.",
-        "<strong>Интенсив 2 — Первая и вторая часть.</strong> Полный разбор тестовой части: системы счисления, кодирование, алгоритмы, исполнители, работа с таблицами и электронными таблицами — и отработка заданий второй части с оформлением на балл.",
+        "<strong>Интенсив 1 — Программирование.</strong> Python под задачи ОГЭ: переменные, условия, циклы, функции, строки и списки. Задание 16 — алгоритмизация, задание 15.2 — программа на обработку последовательности чисел.",
+        "<strong>Интенсив 2 — Часть 1 и часть 2.</strong> Задания 1–10: кодирование информации, логика, алгоритмы и исполнители, файлы. Задания 11–12 — поиск информации в файлах и файловой системе; 13.1/13.2 — презентация или текстовый документ; 14–15 — электронные таблицы (формулы, диаграммы, сортировка и фильтры).",
       ],
       format: "Очные занятия по 3–4 часа: разбор задач за компьютером, доступ к записям.",
       result: "Все типы заданий ОГЭ по информатике отработаны — приходишь на экзамен без сюрпризов.",
@@ -438,14 +436,6 @@ const courseCopy = [
 let courses = [...fallbackCourses];
 let activeExam = "ege";
 
-class SohoApiError extends Error {
-  constructor(message, data) {
-    super(message);
-    this.name = "SohoApiError";
-    this.data = data;
-  }
-}
-
 const els = {
   courseList: document.querySelector("#courseList"),
   detailsModal: document.querySelector("#detailsModal"),
@@ -454,9 +444,6 @@ const els = {
   selectedCounter: document.querySelector("#selectedCounter"),
   orderCount: document.querySelector("#orderCount"),
   subtotal: document.querySelector("#subtotal"),
-  discount: document.querySelector("#discount"),
-  promoInput: document.querySelector("#promoInput"),
-  promoDiscountLine: document.querySelector("#promoDiscountLine"),
   total: document.querySelector("#total"),
   buttonTotal: document.querySelector("#buttonTotal"),
   sortSelect: document.querySelector("#sortSelect"),
@@ -464,6 +451,7 @@ const els = {
   paymentForm: document.querySelector("#paymentForm"),
   payButton: document.querySelector("#payButton"),
   checkoutResult: document.querySelector("#checkoutResult"),
+  turnstileContainer: document.querySelector("#turnstileContainer"),
   clientName: document.querySelector("#clientName"),
   clientPhone: document.querySelector("#clientPhone"),
   studentName: document.querySelector("#studentName"),
@@ -478,6 +466,61 @@ const money = new Intl.NumberFormat("ru-RU", {
 
 function formatMoney(value) {
   return money.format(value).replace("RUB", "₽");
+}
+
+// Escape values that come from the SOHO API before they go into innerHTML.
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[ch]);
+}
+
+// SOHO is the only place a payment URL should ever point to.
+function isTrustedPaymentUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && /(^|\.)soholms\.com$/i.test(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+// --- Cloudflare Turnstile (anti-bot on checkout) --------------------------
+let turnstileSiteKey = "";
+let turnstileWidgetId = null;
+
+function loadTurnstileScript() {
+  return new Promise((resolve) => {
+    if (window.turnstile) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve(Boolean(window.turnstile));
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+}
+
+async function setupTurnstile(siteKey) {
+  if (!siteKey || turnstileWidgetId !== null) return;
+  turnstileSiteKey = siteKey;
+  if (!(await loadTurnstileScript()) || !window.turnstile) return;
+  els.turnstileContainer.hidden = false;
+  turnstileWidgetId = window.turnstile.render(els.turnstileContainer, { sitekey: siteKey });
+}
+
+function turnstileToken() {
+  if (turnstileWidgetId === null || !window.turnstile) return "";
+  return window.turnstile.getResponse(turnstileWidgetId) || "";
+}
+
+function resetTurnstile() {
+  if (turnstileWidgetId !== null && window.turnstile) window.turnstile.reset(turnstileWidgetId);
 }
 
 function icon(name) {
@@ -503,9 +546,7 @@ function selectedCourse() {
 
 function totals() {
   const subtotal = selectedCourses().reduce((sum, course) => sum + course.price, 0);
-  const promo = els.promoInput.value.trim().toUpperCase();
-  const discount = promo === "PLANCK10" ? Math.round(subtotal * 0.1) : 0;
-  return { subtotal, discount, total: subtotal - discount };
+  return { subtotal, total: subtotal };
 }
 
 function selectedStudentName() {
@@ -528,11 +569,6 @@ function normalizeRussianPhone(value) {
   const digits = phoneDigits(value);
   if (digits.length !== 11 || !/^[78]/.test(digits)) return "";
   return `7${digits.slice(1)}`;
-}
-
-function splitRussianFullName(value) {
-  const [lastName, firstName] = normalizeRussianName(value).split(" ");
-  return { firstName, lastName };
 }
 
 function formatRussianPhone(value) {
@@ -677,11 +713,11 @@ function renderCourses() {
       (course) => `
         <article class="course-card ${course.selected ? "selected" : ""}" style="--art-a: ${course.artA}; --art-b: ${course.artB}">
           <div class="course-art">
-            ${course.image ? `<img src="${course.image}" alt="${course.name}">` : `<span>${course.art}<small>${course.lessons ? `${course.lessons} занятий` : "старт 25 мая"}</small></span>`}
+            ${course.image ? `<img src="${course.image}" alt="${escapeHtml(course.name)}">` : `<span>${course.art}<small>${course.lessons ? `${course.lessons} занятий` : "старт 25 мая"}</small></span>`}
           </div>
           <div class="course-info">
             <div class="course-title-row">
-              <h3>${course.name}</h3>
+              <h3>${escapeHtml(course.name)}</h3>
               ${course.tag ? `<span class="hot">${course.tag}</span>` : ""}
             </div>
             <p>${course.description}</p>
@@ -709,7 +745,7 @@ function renderCourses() {
 
 function renderOrder() {
   const selected = selectedCourses();
-  const { subtotal, discount, total } = totals();
+  const { subtotal, total } = totals();
   const studentName = selectedStudentName();
   els.orderItems.innerHTML = selected.length
     ? selected
@@ -718,7 +754,7 @@ function renderOrder() {
             <div class="order-item" style="--art-a: ${course.artA}; --art-b: ${course.artB}">
               <span class="order-thumb">${course.art}</span>
               <div>
-                <h3>${course.name}</h3>
+                <h3>${escapeHtml(course.name)}</h3>
                 <p>Для: ${studentName}</p>
               </div>
               <strong>${formatMoney(course.price)}</strong>
@@ -732,8 +768,6 @@ function renderOrder() {
   els.selectedCounter.textContent = `${selected.length} выбрано`;
   els.orderCount.textContent = `${selected.length} ${plural(selected.length, ["пакет", "пакета", "пакетов"])}`;
   els.subtotal.textContent = formatMoney(subtotal);
-  els.discount.textContent = `-${formatMoney(discount)}`;
-  els.promoDiscountLine.hidden = discount === 0;
   els.total.textContent = formatMoney(total);
   els.buttonTotal.textContent = formatMoney(total);
   els.payButton.disabled = selected.length === 0;
@@ -767,37 +801,18 @@ function render() {
   renderOrder();
 }
 
-async function sohoRequest(path, body) {
-  if (!SOHO_TOKEN) {
-    await new Promise((resolve) => setTimeout(resolve, 420));
-    return mockResponse(path, body);
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: SOHO_TOKEN,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new SohoApiError(data?.error?.message || data?.message || "Ошибка API SOHO.LMS", data);
-  }
-  return data;
-}
-
 async function loadProducts() {
-  if (!SOHO_TOKEN) return;
-  const data = await sohoRequest("/product/list");
-  if (!Array.isArray(data.products)) return;
-
-  const products = data.products.filter((item) => {
-    const name = String(item.name || "");
-    return Number(item.flowId) === TARGET_FLOW_ID && (name.includes(TARGET_PRODUCT_NAME) || /Лицеист/i.test(name) || Number(item.productId) === 1831795);
-  });
+  let payload;
+  try {
+    const response = await fetch("/api/products");
+    payload = await response.json().catch(() => ({}));
+    if (!response.ok) return;
+  } catch {
+    return; // network/offline — keep the static fallback list
+  }
+  if (payload.turnstileSiteKey) setupTurnstile(payload.turnstileSiteKey);
+  if (payload.configured === false) return; // local dev without SOHO token — keep fallbacks
+  const products = Array.isArray(payload.products) ? payload.products : [];
 
   if (!products.length) {
     courses = [];
@@ -848,138 +863,43 @@ async function loadProducts() {
   render();
 }
 
-function clientIdFromResponse(data) {
-  return data?.clientId || data?.id || data?.client?.clientId || data?.client?.id || data?.data?.clientId || data?.data?.id;
-}
-
-function clientIdFromMessage(message) {
-  const match = String(message).match(/\/crm\/clients\/(\d+)/);
-  return match ? Number(match[1]) : 0;
-}
-
-async function createClient(name, phone, role) {
-  const { firstName, lastName } = splitRussianFullName(name);
-  let client;
-  try {
-    client = await sohoRequest("/client/add_client", {
-      firstName,
-      lastName,
-      phones: [normalizeRussianPhone(phone)],
-    });
-  } catch (error) {
-    const existingClientId = clientIdFromMessage(error.message);
-    if (existingClientId) return existingClientId;
-    throw error;
-  }
-
-  const clientId = clientIdFromResponse(client);
-
-  if (!clientId) {
-    throw new Error(`SOHO.LMS создал клиента (${role}), но не вернул clientId.`);
-  }
-
-  return clientId;
-}
-
-async function createOrderClients(formData) {
-  const parentName = formData.get("parentName");
-  const parentPhone = formData.get("parentPhone");
-  const studentName = formData.get("studentName");
-  const studentPhone = formData.get("studentPhone");
-  const parentClientId = await createClient(parentName, parentPhone, "родитель");
-  const sameClient = normalizeRussianName(parentName) === normalizeRussianName(studentName)
-    && normalizeRussianPhone(parentPhone) === normalizeRussianPhone(studentPhone);
-  const studentClientId = sameClient ? parentClientId : await createClient(studentName, studentPhone, "ученик");
-
-  return { parentClientId, studentClientId };
-}
-
-async function createMasterOrder({ courses, price, clientId, customerId, comment }) {
-  if (location.protocol === "file:") {
-    return { uid: Math.floor(100000 + Math.random() * 900000), positions: courses };
-  }
-
-  const response = await fetch("/api/order", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ courses, price, clientId, customerId, comment }),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || "SOHO.LMS не создал заказ с выбранными пакетами.");
-  }
-  return data.order;
-}
-
+// All SOHO work (client creation, order, payment) happens server-side in /api/order.
+// The browser only sends the selected packages and the buyer's form data.
 async function createCheckout(formData) {
   const selected = selectedCourses();
   if (!selected.length) {
     throw new Error("Выберите хотя бы один пакет для оплаты.");
   }
 
-  const { total } = totals();
-  const { parentClientId, studentClientId } = await createOrderClients(formData);
-  const comment = [
-    "Единая оплата выбранных пакетов",
-    `Курс: learning/courses/${COURSE_ID}/`,
-    `Пакеты: ${selected.map((course) => `${course.id} ${course.name}`).join("; ")}`,
-    `Родитель: ${formData.get("parentName")}, ${formData.get("parentPhone")}, clientId ${parentClientId}`,
-    `Ученик: ${formData.get("studentName")}, ${formData.get("studentPhone")}, clientId ${studentClientId}`,
-    `Промокод: ${formData.get("promo") || "не указан"}`,
-    "Способ оплаты: СБП",
-  ].join("\n");
+  if (location.protocol === "file:") {
+    return { orderId: Math.floor(100000 + Math.random() * 900000), paymentUrl: "https://pay.example.com/soho-demo-checkout" };
+  }
 
-  const order = await createMasterOrder({
-    courses: selected,
-    price: total,
-    clientId: parentClientId,
-    customerId: studentClientId,
-    comment,
+  const token = turnstileToken();
+  if (turnstileSiteKey && !token) {
+    throw new Error("Подтвердите, что вы не робот.");
+  }
+
+  const response = await fetch("/api/order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      courses: selected.map((course) => ({
+        productId: course.productId,
+        flowId: course.flowId,
+        name: course.name,
+        price: course.price,
+      })),
+      parent: { name: formData.get("parentName"), phone: formData.get("parentPhone") },
+      student: { name: formData.get("studentName"), phone: formData.get("studentPhone") },
+      turnstileToken: token,
+    }),
   });
-
-  const orderId = order.uid || order.orderId || 0;
-  if (order.paymentUrl) {
-    return { orderId, paymentUrl: order.paymentUrl };
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.paymentUrl) {
+    throw new Error(data.error || "SOHO.LMS не создал заказ с выбранными пакетами.");
   }
-
-  const existingPayment = order.payments?.find((payment) => payment.paymentUrl);
-  if (existingPayment?.paymentUrl) {
-    return { orderId, paymentUrl: existingPayment.paymentUrl };
-  }
-
-  const payment = await sohoRequest("/order/payment/add", {
-    orderId,
-    amount: total,
-    deadlineAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    comment: "Консолидированный платёж за выбранные курсы",
-  });
-
-  if (!payment.paymentUrl) {
-    throw new Error("SOHO.LMS создал заказ, но не вернул ссылку на оплату.");
-  }
-
-  return { orderId, paymentUrl: payment.paymentUrl };
-}
-
-function mockResponse(path) {
-  if (path === "/client/add_client") {
-    return {
-      clientId: Math.floor(100000 + Math.random() * 900000),
-    };
-  }
-  if (path === "/order/add") {
-    return {
-      orderId: Math.floor(100000 + Math.random() * 900000),
-      payments: [],
-    };
-  }
-  if (path === "/order/payment/add") {
-    return {
-      id: Math.floor(1000 + Math.random() * 9000),
-      paymentUrl: "https://pay.example.com/soho-demo-checkout",
-    };
-  }
-  return { result: true };
+  return { orderId: data.orderId || 0, paymentUrl: data.paymentUrl };
 }
 
 let activeDetailsCourseId = null;
@@ -990,10 +910,10 @@ function courseDetailsBodyHtml(course) {
   const intro = details.intro || course.description || "";
   return `
     <div class="modal-head" style="--art-a: ${course.artA}; --art-b: ${course.artB}">
-      <span class="modal-thumb">${course.image ? `<img src="${course.image}" alt="${course.name}">` : course.art}</span>
+      <span class="modal-thumb">${course.image ? `<img src="${course.image}" alt="${escapeHtml(course.name)}">` : course.art}</span>
       <div class="modal-head-info">
         <div class="course-title-row">
-          <h2 id="detailsModalTitle">${course.name}</h2>
+          <h2 id="detailsModalTitle">${escapeHtml(course.name)}</h2>
           ${course.tag ? `<span class="hot">${course.tag}</span>` : ""}
         </div>
         <p class="modal-price">${formatMoney(course.price)}</p>
@@ -1078,7 +998,7 @@ document.addEventListener("change", (event) => {
 });
 
 document.addEventListener("input", (event) => {
-  if (event.target.matches("#promoInput, #studentName")) renderOrder();
+  if (event.target.matches("#studentName")) renderOrder();
   if (event.target.matches("#clientName, #studentName")) sanitizeNameInput(event.target);
   if (event.target.matches("#clientPhone, #studentPhone")) sanitizePhoneInput(event.target);
 });
@@ -1099,14 +1019,22 @@ els.paymentForm.addEventListener("submit", async (event) => {
 
   try {
     const checkout = await createCheckout(formData);
-    els.checkoutResult.innerHTML = `
-      Заказ №${checkout.orderId} создан. Переходим к оплате:
-      <a href="${checkout.paymentUrl}" target="_blank" rel="noreferrer">${checkout.paymentUrl}</a>
-    `;
-    window.location.assign(checkout.paymentUrl);
+    const url = checkout.paymentUrl;
+    if (!isTrustedPaymentUrl(url) && location.protocol !== "file:") {
+      throw new Error("Получена некорректная ссылка на оплату. Свяжитесь с поддержкой.");
+    }
+    els.checkoutResult.textContent = `Заказ №${checkout.orderId} создан. Переходим к оплате: `;
+    const link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = url;
+    els.checkoutResult.appendChild(link);
+    window.location.assign(url);
   } catch (error) {
     els.checkoutResult.textContent = error.message;
   } finally {
+    resetTurnstile();
     els.payButton.disabled = selectedCourses().length === 0;
   }
 });
