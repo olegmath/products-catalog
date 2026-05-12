@@ -736,9 +736,9 @@ async function loadProducts() {
       if (a.exam !== b.exam) return a.exam === "ege" ? -1 : 1;
       return b.price - a.price;
     })
-    .map((course, index) => ({
+    .map((course) => ({
       ...course,
-      tag: index < 2 ? "В продаже" : "",
+      tag: "В продаже",
       selected: false,
     }));
   render();
