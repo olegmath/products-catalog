@@ -1195,6 +1195,15 @@ body.modal-open {
   color: var(--text);
 }
 
+.intensive-date {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+  font-style: normal;
+  letter-spacing: 0.01em;
+}
+
 .modal-action {
   margin-top: 18px;
   width: 100%;
