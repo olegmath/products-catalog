@@ -35,7 +35,7 @@ const fallbackCourses = [
       format: "Живые онлайн-занятия по 3-4 часа в малых группах.",
       result: "Системные знания и спокойная подготовка к экзамену без хаоса в голове.",
     },
-    selected: true,
+    selected: false,
   },
   {
     id: "ege-pro",
@@ -67,7 +67,7 @@ const fallbackCourses = [
       format: "Живые онлайн-занятия по 3-4 часа в малых группах.",
       result: "Уверенное решение всех типов задач и максимум баллов на экзамене.",
     },
-    selected: true,
+    selected: false,
   },
   {
     id: "ege-final",
@@ -645,7 +645,7 @@ async function loadProducts() {
     .map((course, index) => ({
       ...course,
       tag: index < 2 ? "В продаже" : "",
-      selected: index === 0,
+      selected: false,
     }));
   render();
 }
