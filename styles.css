@@ -102,15 +102,10 @@ svg {
 }
 
 .brand-mark {
-  display: grid;
-  place-items: center;
   width: 28px;
   height: 28px;
-  border-radius: 7px;
-  background: var(--text);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+  object-fit: contain;
+  display: block;
 }
 
 .secure-note {
