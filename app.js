@@ -781,7 +781,7 @@ async function loadProducts() {
 
   const products = data.products.filter((item) => {
     const name = String(item.name || "");
-    return Number(item.flowId) === TARGET_FLOW_ID && (name.includes(TARGET_PRODUCT_NAME) || /Лицеист/i.test(name));
+    return Number(item.flowId) === TARGET_FLOW_ID && (name.includes(TARGET_PRODUCT_NAME) || /Лицеист/i.test(name) || Number(item.productId) === 1831795);
   });
 
   if (!products.length) {
