@@ -649,6 +649,7 @@ function coursePriceOverride(name) {
   const overrides = [
     { test: /Математика ЕГЭ - Джентльмен/i, price: 5500 },
     { test: /Математика ЕГЭ - 100/i, price: 6500 },
+    { test: /Лицеист/i, price: 5500 },
   ];
   return overrides.find((item) => item.test.test(name))?.price;
 }
@@ -780,7 +781,7 @@ async function loadProducts() {
 
   const products = data.products.filter((item) => {
     const name = String(item.name || "");
-    return Number(item.flowId) === TARGET_FLOW_ID && name.includes(TARGET_PRODUCT_NAME);
+    return Number(item.flowId) === TARGET_FLOW_ID && (name.includes(TARGET_PRODUCT_NAME) || /Лицеист/i.test(name));
   });
 
   if (!products.length) {
