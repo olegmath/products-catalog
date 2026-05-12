@@ -22,6 +22,19 @@ const fallbackCourses = [
     art: "ЕГЭ",
     artA: "#0f172a",
     artB: "#1f7a4e",
+    details: {
+      intro: "Полный цикл подготовки к ЕГЭ — от повторения теории до уверенного результата.",
+      includes: [
+        "24 онлайн-занятия по расписанию (2 раза в неделю)",
+        "Теория по всем темам кодификатора ЕГЭ",
+        "Домашние задания с проверкой преподавателем",
+        "Разбор типовых задач первой и второй части",
+        "Еженедельный контроль прогресса и обратная связь",
+        "Доступ к записям всех занятий",
+      ],
+      format: "Живые онлайн-занятия по 3-4 часа в малых группах.",
+      result: "Системные знания и спокойная подготовка к экзамену без хаоса в голове.",
+    },
     selected: true,
   },
   {
@@ -41,6 +54,19 @@ const fallbackCourses = [
     art: "100",
     artA: "#0f766e",
     artB: "#164e63",
+    details: {
+      intro: "Интенсив для высокого балла: упор на сложные задания и вторую часть.",
+      includes: [
+        "36 онлайн-занятий по расписанию (3 раза в неделю)",
+        "Подробный разбор второй части и заданий повышенной сложности",
+        "Регулярные пробные экзамены с детальным разбором",
+        "Персональные рекомендации по слабым темам",
+        "Домашние задания с развёрнутой проверкой",
+        "Доступ к записям всех занятий",
+      ],
+      format: "Живые онлайн-занятия по 3-4 часа в малых группах.",
+      result: "Уверенное решение всех типов задач и максимум баллов на экзамене.",
+    },
     selected: true,
   },
   {
@@ -59,6 +85,19 @@ const fallbackCourses = [
     art: "май",
     artA: "#111827",
     artB: "#0f766e",
+    details: {
+      intro: "Короткий пакет перед экзаменом — закрываем пробелы и тренируем стратегию.",
+      includes: [
+        "16 онлайн-занятий (4 раза в неделю)",
+        "Повторение ключевых тем экзамена",
+        "Разбор частых ошибок",
+        "Пробные экзамены в формате ЕГЭ",
+        "Стратегия распределения времени на экзамене",
+        "Доступ к записям всех занятий",
+      ],
+      format: "Интенсивный режим, живые онлайн-занятия по 3-4 часа.",
+      result: "Спокойствие и чёткий план действий на самом экзамене.",
+    },
     selected: false,
   },
   {
@@ -78,6 +117,19 @@ const fallbackCourses = [
     art: "ОГЭ",
     artA: "#0f172a",
     artB: "#075985",
+    details: {
+      intro: "Стартовый пакет подготовки к ОГЭ с понятным планом занятий.",
+      includes: [
+        "22 онлайн-занятия (2 раза в неделю)",
+        "Повторение школьной программы",
+        "Тренировка первой части ОГЭ",
+        "Домашние задания с проверкой преподавателем",
+        "Регулярный контроль прогресса",
+        "Доступ к записям всех занятий",
+      ],
+      format: "Живые онлайн-занятия по 3-4 часа в малых группах.",
+      result: "Систематизированные знания и снижение стресса перед экзаменом.",
+    },
     selected: false,
   },
   {
@@ -96,6 +148,19 @@ const fallbackCourses = [
     art: "5",
     artA: "#312e81",
     artB: "#581c87",
+    details: {
+      intro: "Пакет с дополнительной практикой и проверкой решений преподавателем.",
+      includes: [
+        "30 онлайн-занятий (3 раза в неделю)",
+        "Задания второй части ОГЭ",
+        "Проверка решений преподавателем",
+        "Регулярные мини-пробники",
+        "Домашние задания с обратной связью",
+        "Доступ к записям всех занятий",
+      ],
+      format: "Живые онлайн-занятия по 3-4 часа в малых группах.",
+      result: "Готовность к заданиям повышенной сложности и высокий балл.",
+    },
     selected: false,
   },
   {
@@ -115,6 +180,19 @@ const fallbackCourses = [
     art: "ОГЭ",
     artA: "#0f766e",
     artB: "#164e63",
+    details: {
+      intro: "Быстрый пакет для закрытия пробелов перед экзаменом.",
+      includes: [
+        "12 онлайн-занятий (4 раза в неделю)",
+        "Диагностика слабых тем",
+        "Точечные занятия по пробелам",
+        "Финальный пробный экзамен",
+        "Разбор ошибок и рекомендации",
+        "Доступ к записям всех занятий",
+      ],
+      format: "Интенсивный режим, живые онлайн-занятия по 3-4 часа.",
+      result: "Закрытые пробелы и уверенность на экзамене.",
+    },
     selected: false,
   },
 ];
@@ -175,6 +253,8 @@ class SohoApiError extends Error {
 
 const els = {
   courseList: document.querySelector("#courseList"),
+  detailsModal: document.querySelector("#detailsModal"),
+  detailsModalBody: document.querySelector("#detailsModalBody"),
   orderItems: document.querySelector("#orderItems"),
   selectedCounter: document.querySelector("#selectedCounter"),
   orderCount: document.querySelector("#orderCount"),
@@ -385,6 +465,14 @@ function courseCopyFor(name) {
   return courseCopy.find((item) => item.test.test(name));
 }
 
+function coursePriceOverride(name) {
+  const overrides = [
+    { test: /Математика ЕГЭ - Джентльмен/i, price: 5500 },
+    { test: /Математика ЕГЭ - 100/i, price: 6500 },
+  ];
+  return overrides.find((item) => item.test.test(name))?.price;
+}
+
 function renderCourses() {
   const visibleCourses = sortedCourses();
   els.courseList.innerHTML = visibleCourses.length
@@ -410,6 +498,7 @@ function renderCourses() {
             <div class="tag-row">
               <span class="tag">${course.level}</span>
             </div>
+            <button class="course-details-btn" type="button" data-details="${course.id}">Подробнее о пакете</button>
           </div>
           <strong class="course-price">${formatMoney(course.price)}</strong>
           <button class="icon-action" type="button" data-toggle="${course.id}" title="${course.selected ? "Убрать" : "Добавить"}">
@@ -534,7 +623,7 @@ async function loadProducts() {
       name,
       description: copy?.description || `Пакет интенсива "Постойнное Повторение", старт с 25 мая.`,
       accent: copy?.accent || "",
-      price: Number(product.price) || 0,
+      price: coursePriceOverride(name) ?? (Number(product.price) || 0),
       start: "25 мая",
       dates: schedule.dates,
       count: schedule.count,
@@ -695,12 +784,88 @@ function mockResponse(path) {
   return { result: true };
 }
 
+let activeDetailsCourseId = null;
+
+function courseDetailsBodyHtml(course) {
+  const details = course.details || {};
+  const includes = Array.isArray(details.includes) ? details.includes : [];
+  const intro = details.intro || course.description || "";
+  return `
+    <div class="modal-head" style="--art-a: ${course.artA}; --art-b: ${course.artB}">
+      <span class="modal-thumb">${course.image ? `<img src="${course.image}" alt="${course.name}">` : course.art}</span>
+      <div class="modal-head-info">
+        <div class="course-title-row">
+          <h2 id="detailsModalTitle">${course.name}</h2>
+          ${course.tag ? `<span class="hot">${course.tag}</span>` : ""}
+        </div>
+        <p class="modal-price">${formatMoney(course.price)}</p>
+      </div>
+    </div>
+    ${intro ? `<p class="modal-intro">${intro}</p>` : ""}
+    ${includes.length ? `
+      <h3 class="modal-subtitle">Что входит в пакет</h3>
+      <ul class="modal-includes">
+        ${includes.map((item) => `<li>${icon("check")}<span>${item}</span></li>`).join("")}
+      </ul>` : ""}
+    <div class="modal-meta">
+      <span class="meta">${icon("calendar")} ${course.dates}</span>
+      <span class="meta">${icon("clock")} ${course.schedule}</span>
+      ${course.lessons ? `<span class="meta">${icon("monitor")} ${course.lessons} занятий</span>` : ""}
+      <span class="tag">${course.level}</span>
+    </div>
+    ${details.format ? `<p class="modal-note"><strong>Формат:</strong> ${details.format}</p>` : ""}
+    ${details.result ? `<p class="modal-note"><strong>Результат:</strong> ${details.result}</p>` : ""}
+    <button class="modal-action${course.selected ? " is-remove" : ""}" type="button" data-toggle="${course.id}">
+      ${course.selected ? "Убрать из заказа" : "Добавить в заказ"}
+    </button>
+  `;
+}
+
+function openDetailsModal(courseId) {
+  const course = courses.find((item) => item.id === courseId);
+  if (!course) return;
+  activeDetailsCourseId = courseId;
+  els.detailsModalBody.innerHTML = courseDetailsBodyHtml(course);
+  els.detailsModal.hidden = false;
+  els.detailsModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+}
+
+function refreshDetailsModal() {
+  if (!activeDetailsCourseId || els.detailsModal.hidden) return;
+  const course = courses.find((item) => item.id === activeDetailsCourseId);
+  if (!course) {
+    closeDetailsModal();
+    return;
+  }
+  els.detailsModalBody.innerHTML = courseDetailsBodyHtml(course);
+}
+
+function closeDetailsModal() {
+  els.detailsModal.hidden = true;
+  els.detailsModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+  activeDetailsCourseId = null;
+}
+
 document.addEventListener("click", (event) => {
   const examTab = event.target.closest("[data-exam-tab]");
   if (examTab) setActiveExam(examTab.dataset.examTab);
 
+  const details = event.target.closest("[data-details]");
+  if (details) openDetailsModal(details.dataset.details);
+
+  if (event.target.closest("[data-modal-close]")) closeDetailsModal();
+
   const toggle = event.target.closest("[data-toggle]");
-  if (toggle) toggleCourse(toggle.dataset.toggle);
+  if (toggle) {
+    toggleCourse(toggle.dataset.toggle);
+    refreshDetailsModal();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !els.detailsModal.hidden) closeDetailsModal();
 });
 
 document.addEventListener("change", (event) => {

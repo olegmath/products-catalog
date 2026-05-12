@@ -1003,3 +1003,233 @@ legend {
     font-size: 20px;
   }
 }
+
+/* ─── Course details button ─────────────────────────────── */
+
+.course-details-btn {
+  margin-top: 10px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+}
+
+.course-details-btn:hover {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+/* ─── Details modal ─────────────────────────────────────── */
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.modal-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 22px;
+  background: var(--panel);
+  border-radius: var(--r-md);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted-strong);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.modal-close:hover {
+  background: var(--text);
+  color: #fff;
+  border-color: var(--text);
+}
+
+.modal-close svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+}
+
+.modal-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding-right: 36px;
+}
+
+.modal-thumb {
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, var(--art-a, #0f172a), var(--art-b, #1f7a4e));
+}
+
+.modal-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-head-info h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.modal-price {
+  margin: 4px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.modal-intro {
+  margin: 14px 0 0;
+  color: var(--muted-strong);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.modal-subtitle {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.modal-includes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.modal-includes li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.modal-includes svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  stroke: var(--accent, #1f7a4e);
+  stroke-width: 2;
+  fill: none;
+}
+
+.modal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.modal-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted-strong);
+}
+
+.modal-note strong {
+  color: var(--text);
+}
+
+.modal-action {
+  margin-top: 18px;
+  width: 100%;
+  height: 42px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--text);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 140ms ease;
+}
+
+.modal-action:hover {
+  opacity: 0.88;
+}
+
+.modal-action.is-remove {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+}
+
+@media (max-width: 560px) {
+  .modal {
+    padding: 12px;
+  }
+
+  .modal-card {
+    padding: 18px;
+  }
+}
