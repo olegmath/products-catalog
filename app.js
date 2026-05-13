@@ -495,12 +495,12 @@ let turnstileWidgetId = null;
 
 function loadTurnstileScript() {
   return new Promise((resolve) => {
-    if (window.turnstile) return resolve(true);
+    if (window.smartCaptcha) return resolve(true);
+    window.smartCaptchaReady = () => resolve(Boolean(window.smartCaptcha));
     const script = document.createElement("script");
-    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.src = "https://smartcaptcha.cloud.yandex.ru/captcha.js?render=onload&onload=smartCaptchaReady";
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve(Boolean(window.turnstile));
     script.onerror = () => resolve(false);
     document.head.appendChild(script);
   });
@@ -509,18 +509,18 @@ function loadTurnstileScript() {
 async function setupTurnstile(siteKey) {
   if (!siteKey || turnstileWidgetId !== null) return;
   turnstileSiteKey = siteKey;
-  if (!(await loadTurnstileScript()) || !window.turnstile) return;
+  if (!(await loadTurnstileScript()) || !window.smartCaptcha) return;
   els.turnstileContainer.hidden = false;
-  turnstileWidgetId = window.turnstile.render(els.turnstileContainer, { sitekey: siteKey });
+  turnstileWidgetId = window.smartCaptcha.render(els.turnstileContainer, { sitekey: siteKey });
 }
 
 function turnstileToken() {
-  if (turnstileWidgetId === null || !window.turnstile) return "";
-  return window.turnstile.getResponse(turnstileWidgetId) || "";
+  if (turnstileWidgetId === null || !window.smartCaptcha) return "";
+  return window.smartCaptcha.getResponse(turnstileWidgetId) || "";
 }
 
 function resetTurnstile() {
-  if (turnstileWidgetId !== null && window.turnstile) window.turnstile.reset(turnstileWidgetId);
+  if (turnstileWidgetId !== null && window.smartCaptcha) window.smartCaptcha.reset(turnstileWidgetId);
 }
 
 function icon(name) {
