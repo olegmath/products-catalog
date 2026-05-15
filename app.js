@@ -1,6 +1,6 @@
 const COURSE_ID = 23978;
 const TARGET_FLOW_ID = 34749;
-const TARGET_PRODUCT_NAME = 'Интенсив "Постойнное Повторение"';
+const TARGET_PRODUCT_NAME = 'Интенсив "Постоянное Повторение"';
 
 const fallbackCourses = [
   {
@@ -833,7 +833,7 @@ async function loadProducts() {
       productId: product.productId,
       flowId: product.flowId,
       name,
-      description: copy?.description || `Пакет интенсива "Постойнное Повторение", старт с 25 мая.`,
+      description: copy?.description || `Пакет интенсива "Постоянное Повторение", старт с 25 мая.`,
       accent: copy?.accent || "",
       details: copy?.details || null,
       price: coursePriceOverride(name) ?? (Number(product.price) || 0),
