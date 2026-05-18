@@ -56,6 +56,17 @@
 
           <div class="summary-lines">
             <div><span>Сумма</span><strong id="subtotal">0 ₽</strong></div>
+            <div class="promo-line">
+              <span>Промокод</span>
+              <div class="promo-input-row">
+                <input id="promoInput" type="text" placeholder="МАЙ500" autocomplete="off" maxlength="20" />
+                <button id="promoApply" class="promo-apply-btn" type="button">Применить</button>
+              </div>
+            </div>
+            <div id="discountLine" class="discount" hidden>
+              <span id="discountLabel">Скидка</span>
+              <strong id="discountAmount">−0 ₽</strong>
+            </div>
             <div class="total-line"><span>Итого</span><strong id="total">0 ₽</strong></div>
           </div>
 

@@ -666,24 +666,63 @@ h2 {
   font-weight: 600;
 }
 
+.promo-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 .promo-line input {
-  width: 120px;
+  width: 100px;
   height: 28px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--panel);
-  text-align: right;
+  text-align: left;
   font-size: 12px;
   font-weight: 500;
   color: var(--text);
   outline: none;
   transition: border-color 140ms ease, box-shadow 140ms ease;
+  text-transform: uppercase;
 }
 
 .promo-line input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.promo-line input:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.promo-apply-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--panel-soft);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-strong);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.promo-apply-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  border-color: var(--accent);
+}
+
+.promo-apply-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+  color: var(--success);
+  border-color: currentColor;
 }
 
 .total-line {

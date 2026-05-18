@@ -435,6 +435,7 @@ const courseCopy = [
 
 let courses = [...fallbackCourses];
 let activeExam = "ege";
+let appliedPromo = null;
 
 const els = {
   courseList: document.querySelector("#courseList"),
@@ -456,6 +457,11 @@ const els = {
   clientPhone: document.querySelector("#clientPhone"),
   studentName: document.querySelector("#studentName"),
   studentPhone: document.querySelector("#studentPhone"),
+  promoInput: document.querySelector("#promoInput"),
+  promoApply: document.querySelector("#promoApply"),
+  discountLine: document.querySelector("#discountLine"),
+  discountLabel: document.querySelector("#discountLabel"),
+  discountAmount: document.querySelector("#discountAmount"),
 };
 
 const money = new Intl.NumberFormat("ru-RU", {
@@ -477,6 +483,11 @@ function escapeHtml(value) {
     '"': "&quot;",
     "'": "&#39;",
   })[ch]);
+}
+
+// Validate hex color before inserting into CSS custom property.
+function safeColor(value) {
+  return /^#[0-9a-f]{3,6}$/i.test(String(value ?? "")) ? value : "#000000";
 }
 
 // SOHO is the only place a payment URL should ever point to.
@@ -546,7 +557,8 @@ function selectedCourse() {
 
 function totals() {
   const subtotal = selectedCourses().reduce((sum, course) => sum + course.price, 0);
-  return { subtotal, total: subtotal };
+  const discount = appliedPromo ? Math.min(appliedPromo.discount, subtotal) : 0;
+  return { subtotal, discount, total: subtotal - discount };
 }
 
 function selectedStudentName() {
@@ -630,6 +642,42 @@ function validatedFormData() {
   return formData;
 }
 
+async function applyPromo() {
+  const code = els.promoInput.value.trim();
+  if (!code) return;
+
+  els.promoApply.disabled = true;
+  els.promoApply.textContent = "...";
+
+  try {
+    const res = await fetch("/api/promo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json().catch(() => ({}));
+    const discount = Number(data.discount) || 0;
+
+    if (discount > 0) {
+      appliedPromo = { code: code.toUpperCase(), discount };
+      els.promoApply.textContent = "Применён";
+      els.promoInput.disabled = true;
+    } else {
+      appliedPromo = null;
+      els.promoApply.textContent = "Применить";
+      els.promoApply.disabled = false;
+      els.promoInput.setCustomValidity("Промокод не найден");
+      els.promoInput.reportValidity();
+      els.promoInput.setCustomValidity("");
+    }
+  } catch {
+    appliedPromo = null;
+    els.promoApply.textContent = "Применить";
+    els.promoApply.disabled = false;
+  }
+  renderOrder();
+}
+
 function sortedCourses() {
   const mode = els.sortSelect.value;
   return courses.filter((course) => course.exam === activeExam).sort((a, b) => {
@@ -711,17 +759,17 @@ function renderCourses() {
     ? visibleCourses
     .map(
       (course) => `
-        <article class="course-card ${course.selected ? "selected" : ""}" style="--art-a: ${course.artA}; --art-b: ${course.artB}">
+        <article class="course-card ${course.selected ? "selected" : ""}" style="--art-a: ${safeColor(course.artA)}; --art-b: ${safeColor(course.artB)}">
           <div class="course-art">
-            ${course.image ? `<img src="${course.image}" alt="${escapeHtml(course.name)}">` : `<span>${course.art}<small>${course.lessons ? `${course.lessons} занятий` : "старт 25 мая"}</small></span>`}
+            ${course.image ? `<img src="${course.image}" alt="${escapeHtml(course.name)}">` : `<span>${escapeHtml(course.art)}<small>${course.lessons ? `${course.lessons} занятий` : "старт 25 мая"}</small></span>`}
           </div>
           <div class="course-info">
             <div class="course-title-row">
               <h3>${escapeHtml(course.name)}</h3>
-              ${course.tag ? `<span class="hot">${course.tag}</span>` : ""}
+              ${course.tag ? `<span class="hot">${escapeHtml(course.tag)}</span>` : ""}
             </div>
-            <p>${course.description}</p>
-            ${course.accent ? `<p class="course-accent">${course.accent}</p>` : ""}
+            <p>${escapeHtml(course.description)}</p>
+            ${course.accent ? `<p class="course-accent">${escapeHtml(course.accent)}</p>` : ""}
             <div class="meta-row">
               <span class="meta">${icon("calendar")} ${course.dates}</span>
               <span class="meta">${icon("clock")} ${course.count} ${plural(course.count, ["интенсив", "интенсива", "интенсивов"])}</span>
@@ -745,13 +793,13 @@ function renderCourses() {
 
 function renderOrder() {
   const selected = selectedCourses();
-  const { subtotal, total } = totals();
+  const { subtotal, discount, total } = totals();
   const studentName = selectedStudentName();
   els.orderItems.innerHTML = selected.length
     ? selected
         .map(
           (course) => `
-            <div class="order-item" style="--art-a: ${course.artA}; --art-b: ${course.artB}">
+            <div class="order-item" style="--art-a: ${safeColor(course.artA)}; --art-b: ${safeColor(course.artB)}">
               <span class="order-thumb">${course.art}</span>
               <div>
                 <h3>${escapeHtml(course.name)}</h3>
@@ -768,6 +816,13 @@ function renderOrder() {
   els.selectedCounter.textContent = `${selected.length} выбрано`;
   els.orderCount.textContent = `${selected.length} ${plural(selected.length, ["пакет", "пакета", "пакетов"])}`;
   els.subtotal.textContent = formatMoney(subtotal);
+  if (discount > 0) {
+    els.discountLabel.textContent = `Скидка ${appliedPromo.code}`;
+    els.discountAmount.textContent = `−${formatMoney(discount)}`;
+    els.discountLine.hidden = false;
+  } else {
+    els.discountLine.hidden = true;
+  }
   els.total.textContent = formatMoney(total);
   els.buttonTotal.textContent = formatMoney(total);
   els.payButton.disabled = selected.length === 0;
@@ -892,6 +947,7 @@ async function createCheckout(formData) {
       })),
       parent: { name: formData.get("parentName"), phone: formData.get("parentPhone") },
       student: { name: formData.get("studentName"), phone: formData.get("studentPhone") },
+      promoCode: appliedPromo?.code || "",
       turnstileToken: token,
     }),
   });
@@ -909,8 +965,8 @@ function courseDetailsBodyHtml(course) {
   const includes = Array.isArray(details.includes) ? details.includes : [];
   const intro = details.intro || course.description || "";
   return `
-    <div class="modal-head" style="--art-a: ${course.artA}; --art-b: ${course.artB}">
-      <span class="modal-thumb">${course.image ? `<img src="${course.image}" alt="${escapeHtml(course.name)}">` : course.art}</span>
+    <div class="modal-head" style="--art-a: ${safeColor(course.artA)}; --art-b: ${safeColor(course.artB)}">
+      <span class="modal-thumb">${course.image ? `<img src="${course.image}" alt="${escapeHtml(course.name)}">` : escapeHtml(course.art)}</span>
       <div class="modal-head-info">
         <div class="course-title-row">
           <h2 id="detailsModalTitle">${escapeHtml(course.name)}</h2>
@@ -919,7 +975,7 @@ function courseDetailsBodyHtml(course) {
         <p class="modal-price">${formatMoney(course.price)}</p>
       </div>
     </div>
-    ${intro ? `<p class="modal-intro">${intro}</p>` : ""}
+    ${intro ? `<p class="modal-intro">${escapeHtml(intro)}</p>` : ""}
     ${includes.length ? `
       <h3 class="modal-subtitle">Что входит в пакет</h3>
       <ul class="modal-includes">
@@ -1001,6 +1057,18 @@ document.addEventListener("input", (event) => {
   if (event.target.matches("#studentName")) renderOrder();
   if (event.target.matches("#clientName, #studentName")) sanitizeNameInput(event.target);
   if (event.target.matches("#clientPhone, #studentPhone")) sanitizePhoneInput(event.target);
+  if (event.target.matches("#promoInput") && appliedPromo) {
+    appliedPromo = null;
+    els.promoApply.textContent = "Применить";
+    els.promoApply.disabled = false;
+    renderOrder();
+  }
+});
+
+els.promoApply.addEventListener("click", applyPromo);
+
+els.promoInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") { event.preventDefault(); applyPromo(); }
 });
 
 document.addEventListener("blur", (event) => {

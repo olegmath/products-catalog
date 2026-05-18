@@ -23,6 +23,42 @@ const host = "127.0.0.1";
 
 const soho = require("./lib/soho");
 
+// --- Rate limiting (in-memory, per IP) ------------------------------------
+const rateLimitStore = new Map();
+
+// Clean up expired entries every 5 minutes to avoid memory leak.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore) {
+    if (now > entry.resetAt) rateLimitStore.delete(key);
+  }
+}, 5 * 60 * 1000).unref();
+
+function checkRateLimit(ip, endpoint, max, windowMs) {
+  const key = `${ip}:${endpoint}`;
+  const now = Date.now();
+  const entry = rateLimitStore.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitStore.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= max) return false;
+  entry.count++;
+  return true;
+}
+
+function remoteIp(request) {
+  return request.socket?.remoteAddress || "unknown";
+}
+
+const ALLOWED_ORIGIN = (process.env.ALLOWED_ORIGIN || "").trim();
+
+function isTrustedOrigin(request) {
+  if (!ALLOWED_ORIGIN) return true; // not configured — skip check in dev
+  const origin = request.headers.origin || "";
+  return origin === ALLOWED_ORIGIN;
+}
+
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -55,7 +91,7 @@ function readJson(request) {
     let body = "";
     request.on("data", (chunk) => {
       body += chunk;
-      if (body.length > 1024 * 1024) {
+      if (body.length > 16 * 1024) {
         request.destroy();
         reject(new Error("Request body is too large"));
       }
@@ -72,6 +108,10 @@ function readJson(request) {
 }
 
 async function handleProducts(request, response) {
+  if (!checkRateLimit(remoteIp(request), "products", 30, 60_000)) {
+    sendJson(response, 429, { error: "Слишком много запросов." });
+    return;
+  }
   const turnstileSiteKey = soho.turnstileSiteKey();
   if (!soho.isConfigured()) {
     sendJson(response, 200, { configured: false, products: [], turnstileSiteKey });
@@ -84,9 +124,41 @@ async function handleProducts(request, response) {
   }
 }
 
+async function handlePromo(request, response) {
+  if (request.method !== "POST") {
+    sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+  if (!isTrustedOrigin(request)) {
+    sendJson(response, 403, { error: "Forbidden" });
+    return;
+  }
+  if (!checkRateLimit(remoteIp(request), "promo", 10, 60_000)) {
+    sendJson(response, 429, { error: "Слишком много запросов. Попробуйте через минуту." });
+    return;
+  }
+  let body;
+  try {
+    body = await readJson(request);
+  } catch {
+    sendJson(response, 400, { error: "Некорректные данные" });
+    return;
+  }
+  const discount = soho.lookupPromo(body.code);
+  sendJson(response, 200, { discount });
+}
+
 async function handleOrder(request, response) {
   if (request.method !== "POST") {
     sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+  if (!isTrustedOrigin(request)) {
+    sendJson(response, 403, { error: "Forbidden" });
+    return;
+  }
+  if (!checkRateLimit(remoteIp(request), "order", 5, 60_000)) {
+    sendJson(response, 429, { error: "Слишком много запросов. Попробуйте через минуту." });
     return;
   }
   if (!soho.isConfigured()) {
@@ -102,9 +174,9 @@ async function handleOrder(request, response) {
     return;
   }
 
-  const remoteIp = request.socket?.remoteAddress || "";
+  const ip = remoteIp(request);
   try {
-    sendJson(response, 200, await soho.checkout(body, remoteIp));
+    sendJson(response, 200, await soho.checkout(body, ip));
   } catch (error) {
     if (error instanceof soho.TurnstileError) {
       sendJson(response, 400, { error: "Подтвердите, что вы не робот, и попробуйте снова." });
@@ -126,6 +198,10 @@ const server = http.createServer((request, response) => {
   }
   if (url.pathname === "/api/order") {
     handleOrder(request, response);
+    return;
+  }
+  if (url.pathname === "/api/promo") {
+    handlePromo(request, response);
     return;
   }
 
